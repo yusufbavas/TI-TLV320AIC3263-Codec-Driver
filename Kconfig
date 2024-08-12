@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# TI's shared transport line discipline and the protocol
+# drivers (BT, FM and GPS)
+#
+menu "Texas Instruments aic326x device"
+config SND_SOC_AIC326X
+	select REGMAP
+	select REGMAP_I2C
+	select I2C
+	select MFD_CORE
+	def_bool y
+
+endmenu
