@@ -363,25 +363,25 @@ int aic3xxx_device_init(struct aic3xxx *aic3xxx, int irq)
 	mutex_init(&aic3xxx->io_lock);
 	dev_set_drvdata(aic3xxx->dev, aic3xxx);
 
-#if 0
 	if (!pdata) // NULL
 		return -EINVAL;
 
 	/*GPIO reset for TLV320AIC3262 codec */
 	if (pdata->gpio_reset) {
-		ret = gpio_request(pdata->gpio_reset, "aic3xxx-reset-pin");
-		if (ret != 0) {
-			dev_err(aic3xxx->dev, "not able to acquire gpio\n");
-			goto err_return;
-		}
-		gpio_direction_output(pdata->gpio_reset, 1);
+		gpiod_set_value_cansleep(pdata->gpio_reset, 0);
 		mdelay(5);
-		gpio_direction_output(pdata->gpio_reset, 0);
+
+		gpiod_set_value_cansleep(pdata->gpio_reset, 1);
 		mdelay(5);
-		gpio_direction_output(pdata->gpio_reset, 1);
+
+		gpiod_set_value_cansleep(pdata->gpio_reset, 0);
 		mdelay(5);
 	}
-#endif
+	else
+	{
+		dev_info(aic3xxx->dev, "no reset pin supplied %d\n");
+	}
+
 	/* run the codec through software reset */
 	ret = aic3xxx_reg_write(aic3xxx, AIC3262_RESET_REG, resetVal);
 	if (ret < 0) {
@@ -503,9 +503,6 @@ err_irq:
 #endif
 err_return:
 
-	if (pdata && pdata->gpio_reset)
-		gpio_free(pdata->gpio_reset);
-
 	return ret;
 }
 EXPORT_SYMBOL_GPL(aic3xxx_device_init);
@@ -520,9 +517,6 @@ void aic3xxx_device_exit(struct aic3xxx *aic3xxx)
 
 	if (pdata && pdata->gpio_irq)
 		gpio_free(pdata->naudint_irq);
-	if (pdata && pdata->gpio_reset)
-		gpio_free(pdata->gpio_reset);
-
 }
 EXPORT_SYMBOL_GPL(aic3xxx_device_exit);
 

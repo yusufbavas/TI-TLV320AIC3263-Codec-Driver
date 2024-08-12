@@ -27,7 +27,10 @@
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
-
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
+#include <linux/gpio/driver.h>
+#include <linux/gpio/consumer.h>
 #include "tlv320aic3xxx-core.h"
 
 static bool aic3xxx_volatile(struct device *dev,
@@ -75,6 +78,7 @@ static int aic3xxx_i2c_probe(struct i2c_client *i2c,
 					  const struct i2c_device_id *id)
 {
 	struct aic3xxx *aicxxx;
+	struct aic3xxx_pdata *aic_pdata;
 	const struct regmap_config *regmap_config;
 	int ret;
 
@@ -95,6 +99,14 @@ static int aic3xxx_i2c_probe(struct i2c_client *i2c,
 
 	aicxxx->regmap = devm_regmap_init_i2c(i2c, regmap_config);
 
+	aic_pdata = devm_kzalloc(&i2c->dev, sizeof(*aic_pdata), GFP_KERNEL);
+	if (aic_pdata == NULL)
+		return -ENOMEM;
+
+	aic_pdata->gpio_reset = devm_gpiod_get(&i2c->dev, "reset", GPIOD_OUT_LOW);
+	if (IS_ERR(aic_pdata->gpio_reset))
+		return PTR_ERR(aic_pdata->gpio_reset);
+
 	if (IS_ERR(aicxxx->regmap)) {
 		ret = PTR_ERR(aicxxx->regmap);
 		dev_err(&i2c->dev, "Failed to allocate register map: %d\n",
@@ -104,6 +116,7 @@ static int aic3xxx_i2c_probe(struct i2c_client *i2c,
 
 	aicxxx->type = id->driver_data;
 	aicxxx->dev = &i2c->dev;
+	aicxxx->dev->platform_data = aic_pdata;
 	aicxxx->irq = i2c->irq;
 	i2c_set_clientdata(i2c, aicxxx);
 
